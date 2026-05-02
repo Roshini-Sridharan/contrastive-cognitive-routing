@@ -48,7 +48,7 @@ class EpistemicProxyAgent:
         print(f"   Context : PageIndex tree-search retrieval ({self.retriever._mode} mode)")
 
     # ─────────────────────────────────────────────────────────────────────────
-    # LLM Scorer (unchanged)
+    # LLM Scorer
     # ─────────────────────────────────────────────────────────────────────────
 
     class LLMScorer:
@@ -109,6 +109,7 @@ Return ONLY a number:"""
             print(f"  ⚠️  Error loading identity: {e}")
             self.identity = {
                 "role": "Chief of Staff",
+                "company_name": "TechVision Inc.",
                 "company_values": ["Integrity", "Innovation", "Customer Focus"],
             }
 
@@ -123,7 +124,7 @@ Return ONLY a number:"""
         """
         start_time = time.time()
 
-        # Step 1: Build context via PageIndex tree-search (replaces flat strings)
+        # Step 1: Build context via PageIndex tree-search
         print("  🌲 Retrieving context via PageIndex tree-search...")
         context = self._build_context(query)
 
@@ -155,18 +156,8 @@ Return ONLY a number:"""
     # ─────────────────────────────────────────────────────────────────────────
 
     def _build_context(self, query: str) -> str:
-        """
-        Replace flat string concatenation with PageIndex hierarchical
-        tree-search retrieval.
-
-        The retriever reasons over the document tree to surface only the
-        nodes relevant to `query`, rather than dumping everything into context.
-        This mirrors how PageIndex achieved 98.7% on FinanceBench:
-        relevance through reasoning, not similarity.
-        """
         retrieved = self.retriever.retrieve(query)
 
-        # Prepend role header so the LLM has persona context
         role_header = (
             f"ROLE: {self.identity.get('role', 'Agent')}\n"
             f"COMPANY: {self.identity.get('company_name', 'N/A')}\n"
@@ -176,7 +167,7 @@ Return ONLY a number:"""
         return role_header + retrieved
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Candidate Action Generation (unchanged)
+    # Candidate Action Generation
     # ─────────────────────────────────────────────────────────────────────────
 
     def _generate_candidate_actions(self, query: str, context: str) -> List[str]:
@@ -215,12 +206,13 @@ One per line:"""
         return actions[:5]
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Explanation Generation (unchanged)
+    # Explanation Generation
     # ─────────────────────────────────────────────────────────────────────────
 
     def _generate_explanation(self, query: str,
                                routing_result: RoutingResult) -> str:
-        prompt = f"""As {self.identity['role']}, explain this decision with epistemic reasoning:
+        role = self.identity.get('role', 'Chief of Staff')
+        prompt = f"""As {role}, explain this decision with epistemic reasoning:
 
 Query: {query}
 
@@ -243,7 +235,7 @@ Decision Memo:"""
         return self.model_client.generate(prompt, temperature=0.3)
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Metrics (unchanged)
+    # Metrics
     # ─────────────────────────────────────────────────────────────────────────
 
     def _calculate_ccr_metrics(self, routing_result: RoutingResult,
